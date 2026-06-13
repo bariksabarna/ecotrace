@@ -65,7 +65,7 @@ export default function Dashboard({ activities = [] }) {
       {/* Header Row */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-eco-300">Dashboard</h1>
+          <h2 className="text-2xl md:text-3xl font-bold text-eco-300">Dashboard</h2>
           <p className="text-xs text-eco-300/50">Track your daily carbon footprint</p>
         </div>
         <div className="flex items-center space-x-2 bg-forest-800 border border-forest-700 px-3 py-1.5 rounded-full pulse-glow">
@@ -81,7 +81,7 @@ export default function Dashboard({ activities = [] }) {
         <div className="card flex flex-col items-center justify-center py-8">
           <p className="text-xs uppercase tracking-widest text-eco-300/40 font-semibold mb-4">Today's Footprint</p>
           <div className="relative w-48 h-48 flex items-center justify-center">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200" role="img" aria-label={`Today's carbon footprint: ${todayTotal.toFixed(2)} kg CO₂`}>
               <circle cx="100" cy="100" r={radius} className="stroke-forest-700 fill-none" strokeWidth={strokeWidth} />
               <circle
                 cx="100" cy="100" r={radius}

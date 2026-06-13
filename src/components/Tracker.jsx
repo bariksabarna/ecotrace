@@ -77,7 +77,7 @@ export default function Tracker({ activities = [], setActivities }) {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-eco-300">Track Activities</h1>
+        <h2 className="text-2xl md:text-3xl font-bold text-eco-300">Track Activities</h2>
         <p className="text-xs text-eco-300/50">Log your daily activities to calculate emissions</p>
       </div>
 

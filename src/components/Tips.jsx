@@ -60,7 +60,7 @@ export default function Tips({ activities = [] }) {
     <div className="space-y-6 pb-8 fade-in">
       {/* Header */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-eco-300">Eco Tips</h1>
+        <h2 className="text-2xl md:text-3xl font-bold text-eco-300">Eco Tips</h2>
         <p className="text-xs text-eco-300/50">India-specific actions to reduce your daily footprint</p>
       </div>
 

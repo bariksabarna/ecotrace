@@ -11,7 +11,7 @@ export default function NavBar({ activeTab, setActiveTab }) {
   return (
     <>
       {/* Mobile Bottom Navigation Bar - hidden on md screen and up */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-forest-800 border-t border-forest-700 pb-safe z-50">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-forest-800 border-t border-forest-700 pb-safe z-50" aria-label="Mobile navigation">
         <div className="flex justify-around items-center h-16 px-4">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -50,7 +50,7 @@ export default function NavBar({ activeTab, setActiveTab }) {
           <h1 className="text-2xl font-bold text-eco-500 tracking-tight">EcoTrace</h1>
           <p className="text-xs text-eco-300/50">India Carbon Platform</p>
         </div>
-        <nav className="flex-1 space-y-2">
+        <nav className="flex-1 space-y-2" aria-label="Main navigation">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
