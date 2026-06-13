@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import PropTypes from 'prop-types';
 import { calculateTotal, getCategoryTotals } from '../utils/calculator.js';
 
 const quickActions = [
@@ -296,3 +297,15 @@ export default function AIAssistant({ activities = [] }) {
     </div>
   );
 }
+
+AIAssistant.propTypes = {
+  /** Array of logged activity objects for the current day to provide context to the AI assistant */
+  activities: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      category: PropTypes.string,
+      value: PropTypes.number,
+      label: PropTypes.string,
+    })
+  ),
+};

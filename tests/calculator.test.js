@@ -62,6 +62,10 @@ describe('calculateFood', () => {
   it('null count → 0', () => {
     expect(calculateFood('vegMeal', null)).toBe(0);
   });
+
+  it('unknown mealType → 0', () => {
+    expect(calculateFood('fastfood', 2)).toBe(0);
+  });
 });
 
 describe('calculateEnergy', () => {
@@ -94,6 +98,10 @@ describe('calculateShopping', () => {
 
   it('undefined category → 0', () => {
     expect(calculateShopping(undefined, 5)).toBe(0);
+  });
+
+  it('unknown category → 0', () => {
+    expect(calculateShopping('yacht', 2)).toBe(0);
   });
 });
 
@@ -266,5 +274,18 @@ describe('getCategoryTotals — edge cases', () => {
     ];
     const result = getCategoryTotals(activities);
     expect(result.energy).toBe(6.6);
+  });
+
+  it('skips null elements or elements with NaN values', () => {
+    const activities = [
+      null,
+      { category: 'transport', value: 1.5 },
+      { value: 2.0 },
+      { category: 'food', value: NaN },
+      undefined,
+    ];
+    const result = getCategoryTotals(activities);
+    expect(result.transport).toBe(3.5);
+    expect(result.food).toBe(0);
   });
 });

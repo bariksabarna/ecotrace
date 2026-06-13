@@ -2,7 +2,7 @@
  * @file storage.test.js
  * Tests for src/utils/storage.js — uses vitest's built-in localStorage mock.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   saveToday,
   getToday,
@@ -163,3 +163,44 @@ describe('getDoneTips / markTipDone', () => {
     expect(getDoneTips()).toEqual([]);
   });
 });
+
+describe('localStorage error handling', () => {
+  let originalGetItem;
+  let originalSetItem;
+
+  beforeEach(() => {
+    originalGetItem = localStorage.getItem;
+    originalSetItem = localStorage.setItem;
+  });
+
+  // Restore mock after each test
+  afterEach(() => {
+    localStorage.getItem = originalGetItem;
+    localStorage.setItem = originalSetItem;
+  });
+
+  it('handles localStorage throw gracefully across all functions', () => {
+    localStorage.getItem = () => {
+      throw new Error('Quota exceeded');
+    };
+    localStorage.setItem = () => {
+      throw new Error('Quota exceeded');
+    };
+
+    expect(() => saveToday([{ id: '1', value: 10 }])).not.toThrow();
+    expect(getToday()).toEqual([]);
+
+    const days = getLast7Days();
+    expect(days).toHaveLength(7);
+    days.forEach((day) => {
+      expect(day.total).toBe(0);
+    });
+
+    expect(() => saveStreak(5)).not.toThrow();
+    expect(getStreak()).toBe(0);
+
+    expect(getDoneTips()).toEqual([]);
+    expect(() => markTipDone('tip-1')).not.toThrow();
+  });
+});
+

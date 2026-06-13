@@ -6,38 +6,41 @@ const DONE_TIPS_KEY = 'ecotrace_done_tips';
 
 /**
  * Get date string YYYY-MM-DD for a given Date (or today).
+ * @param {Date} [date]
+ * @returns {string}
  */
 function dateKey(date = new Date()) {
   return date.toISOString().split('T')[0];
 }
 
 /**
- * Save today's activities array.
+ * Save today's activities array to localStorage.
  * @param {Array} activities
+ * @returns {void}
  */
 export function saveToday(activities) {
   try {
     localStorage.setItem(`${PREFIX}${dateKey()}`, JSON.stringify(activities));
-  } catch (e) {
-    console.error('saveToday error:', e);
+  } catch {
+    // localStorage unavailable (private-mode quota exhaustion) — fail silently
   }
 }
 
 /**
- * Get today's activities array.
+ * Get today's activities array from localStorage.
  * @returns {Array}
  */
 export function getToday() {
   try {
     const raw = localStorage.getItem(`${PREFIX}${dateKey()}`);
     return raw ? JSON.parse(raw) : [];
-  } catch (e) {
+  } catch {
     return [];
   }
 }
 
 /**
- * Get last 7 days of { date, total } objects.
+ * Get last 7 days of { date, total } objects, oldest first.
  * @returns {Array<{date: string, total: number}>}
  */
 export function getLast7Days() {
@@ -58,19 +61,20 @@ export function getLast7Days() {
 }
 
 /**
- * Save streak count.
+ * Save streak count to localStorage.
  * @param {number} days
+ * @returns {void}
  */
 export function saveStreak(days) {
   try {
     localStorage.setItem(STREAK_KEY, String(days));
-  } catch (e) {
-    console.error('saveStreak error:', e);
+  } catch {
+    // fail silently
   }
 }
 
 /**
- * Get current streak count.
+ * Get current streak count from localStorage.
  * @returns {number}
  */
 export function getStreak() {
@@ -83,7 +87,7 @@ export function getStreak() {
 }
 
 /**
- * Get array of done tip IDs.
+ * Get array of completed tip IDs from localStorage.
  * @returns {Array<string>}
  */
 export function getDoneTips() {
@@ -96,8 +100,9 @@ export function getDoneTips() {
 }
 
 /**
- * Mark a tip as done.
+ * Mark a tip as done in localStorage.
  * @param {string} tipId
+ * @returns {void}
  */
 export function markTipDone(tipId) {
   try {
@@ -106,7 +111,7 @@ export function markTipDone(tipId) {
       done.push(tipId);
       localStorage.setItem(DONE_TIPS_KEY, JSON.stringify(done));
     }
-  } catch (e) {
-    console.error('markTipDone error:', e);
+  } catch {
+    // fail silently
   }
 }

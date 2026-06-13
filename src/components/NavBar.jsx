@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 export default function NavBar({ activeTab, setActiveTab }) {
   const tabs = [
@@ -79,3 +80,10 @@ export default function NavBar({ activeTab, setActiveTab }) {
     </>
   );
 }
+
+NavBar.propTypes = {
+  /** Currently active tab id */
+  activeTab: PropTypes.string.isRequired,
+  /** Callback to switch tabs */
+  setActiveTab: PropTypes.func.isRequired,
+};

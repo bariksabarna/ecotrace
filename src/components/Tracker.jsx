@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import PropTypes from 'prop-types';
 import { TRANSPORT, FOOD, ENERGY, SHOPPING } from '../utils/emissionFactors.js';
 import {
   calculateTransport,
@@ -293,3 +294,18 @@ export default function Tracker({ activities = [], setActivities }) {
     </div>
   );
 }
+
+Tracker.propTypes = {
+  /** Current day's logged activities */
+  activities: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      category: PropTypes.string.isRequired,
+      value: PropTypes.number.isRequired,
+      label: PropTypes.string.isRequired,
+      timestamp: PropTypes.string,
+    })
+  ),
+  /** Setter to update the activities state in App */
+  setActivities: PropTypes.func.isRequired,
+};

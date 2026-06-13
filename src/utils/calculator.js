@@ -7,9 +7,9 @@ import { TRANSPORT, FOOD, ENERGY, SHOPPING } from './emissionFactors.js';
  * @returns {number} kg CO₂
  */
 export function calculateTransport(mode, distanceKm) {
-  if (!mode || distanceKm == null || isNaN(distanceKm)) return 0;
+  if (!mode || distanceKm === null || distanceKm === undefined || isNaN(distanceKm)) return 0;
   const factor = TRANSPORT[mode];
-  if (factor == null) return 0;
+  if (factor === null || factor === undefined) return 0;
   return Math.round(factor * Number(distanceKm) * 1000) / 1000;
 }
 
@@ -20,9 +20,9 @@ export function calculateTransport(mode, distanceKm) {
  * @returns {number} kg CO₂
  */
 export function calculateFood(mealType, count) {
-  if (!mealType || count == null || isNaN(count)) return 0;
+  if (!mealType || count === null || count === undefined || isNaN(count)) return 0;
   const factor = FOOD[mealType];
-  if (factor == null) return 0;
+  if (factor === null || factor === undefined) return 0;
   return Math.round(factor * Number(count) * 1000) / 1000;
 }
 
@@ -33,8 +33,8 @@ export function calculateFood(mealType, count) {
  * @returns {number} kg CO₂
  */
 export function calculateEnergy(electricityKwh, lpgFraction) {
-  const kwh = electricityKwh == null || isNaN(electricityKwh) ? 0 : Number(electricityKwh);
-  const lpg = lpgFraction == null || isNaN(lpgFraction) ? 0 : Number(lpgFraction);
+  const kwh = electricityKwh === null || electricityKwh === undefined || isNaN(electricityKwh) ? 0 : Number(electricityKwh);
+  const lpg = lpgFraction === null || lpgFraction === undefined || isNaN(lpgFraction) ? 0 : Number(lpgFraction);
   const electricityCO2 = ENERGY.electricityKwh * kwh;
   const lpgCO2 = ENERGY.lpgCylinder * lpg;
   return Math.round((electricityCO2 + lpgCO2) * 1000) / 1000;
@@ -47,9 +47,9 @@ export function calculateEnergy(electricityKwh, lpgFraction) {
  * @returns {number} kg CO₂
  */
 export function calculateShopping(category, quantity) {
-  if (!category || quantity == null || isNaN(quantity)) return 0;
+  if (!category || quantity === null || quantity === undefined || isNaN(quantity)) return 0;
   const factor = SHOPPING[category];
-  if (factor == null) return 0;
+  if (factor === null || factor === undefined) return 0;
   return Math.round(factor * Number(quantity) * 1000) / 1000;
 }
 
@@ -78,7 +78,7 @@ export function getCategoryTotals(activities) {
     (acc, a) => {
       if (!a || isNaN(a.value)) return acc;
       const cat = a.category || 'transport';
-      if (acc[cat] != null) {
+      if (acc[cat] !== null && acc[cat] !== undefined) {
         acc[cat] = Math.round((acc[cat] + Number(a.value)) * 1000) / 1000;
       }
       return acc;

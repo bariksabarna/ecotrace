@@ -6,8 +6,12 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import compression from 'compression';
 
 const app = express();
+
+// ── Compression (efficiency) ──────────────────────────────────────────────────
+app.use(compression());
 
 // ── Security Headers via Helmet ───────────────────────────────────────────────
 app.use(
@@ -22,19 +26,22 @@ app.use(
         connectSrc: ["'self'"],
         frameSrc: ["'none'"],
         objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
       },
     },
-    crossOriginEmbedderPolicy: false, // allow fonts/images from CDN
+    crossOriginEmbedderPolicy: false,
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   })
 );
 
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
 const chatLimiter = rateLimit({
-  windowMs: 60 * 1000,      // 1 minute window
-  max: 20,                   // max 20 requests per IP per window
+  windowMs: 60 * 1000,   // 1-minute window
+  max: 20,                // 20 requests per IP per window
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Too many requests. Please slow down.' },
+  message: { error: 'Too many requests — please slow down.' },
 });
 
 // ── Body Parser ───────────────────────────────────────────────────────────────
@@ -42,7 +49,7 @@ app.use(express.json({ limit: '10kb' }));
 
 // ── Static Files ──────────────────────────────────────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.use(express.static(path.join(__dirname, '../dist')));
+app.use(express.static(path.join(__dirname, '../dist'), { maxAge: '1d' }));
 
 // ── Gemini Client ─────────────────────────────────────────────────────────────
 const genAI = process.env.GEMINI_API_KEY
@@ -57,13 +64,27 @@ Common Indian transport: CNG auto, metro, state buses, two-wheelers.
 Be concise (2–4 sentences), practical, encouraging, and India-specific.
 When listing tips, give max 5 bullet points.`;
 
+/** Allowed top-category values to prevent injection */
+const ALLOWED_CATEGORIES = new Set(['transport', 'food', 'energy', 'shopping', 'none']);
+
 // ── Chat Endpoint ─────────────────────────────────────────────────────────────
 app.post('/api/chat', chatLimiter, async (req, res) => {
   try {
     const { messages, context } = req.body;
 
+    // Validate messages array
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'Invalid request: messages array required.' });
+    }
+    if (messages.length > 50) {
+      return res.status(400).json({ error: 'Too many messages in history.' });
+    }
+
+    // Validate each message shape
+    for (const m of messages) {
+      if (typeof m !== 'object' || !m || typeof m.content !== 'string') {
+        return res.status(400).json({ error: 'Invalid message format.' });
+      }
     }
 
     if (!genAI) {
@@ -76,16 +97,14 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Empty message.' });
     }
 
-    // Sanitize context fields to prevent injection
-    const safeTotal = typeof context?.todayTotal === 'number'
-      ? context.todayTotal.toFixed(2)
-      : '?';
-    const allowedCategories = ['transport', 'food', 'energy', 'shopping', 'none'];
-    const safeTopCategory = allowedCategories.includes(context?.topCategory)
+    // Sanitize context fields (allowlist + type coercion)
+    const rawTotal = Number(context?.todayTotal);
+    const safeTotal = isFinite(rawTotal) ? rawTotal.toFixed(2) : '0.00';
+    const safeTopCategory = ALLOWED_CATEGORIES.has(context?.topCategory)
       ? context.topCategory
       : 'none';
 
-    // Build history (all messages except the last)
+    // Build conversation history (all except last message)
     const history = messages.slice(0, -1).map((m) => ({
       role: m.role === 'user' ? 'user' : 'model',
       parts: [{ text: String(m.content).slice(0, 500) }],
@@ -102,8 +121,15 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     return res.json({ text: result.response.text() });
   } catch (err) {
     console.error('Gemini error:', err.message);
-    return res.status(500).json({ error: 'AI service temporarily unavailable. Please try again.' });
+    return res
+      .status(500)
+      .json({ error: 'AI service temporarily unavailable. Please try again.' });
   }
+});
+
+// ── Health Check ──────────────────────────────────────────────────────────────
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'EcoTrace' });
 });
 
 // ── SPA Fallback ──────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { calculateTotal, getCategoryTotals } from '../utils/calculator.js';
 import { getStreak, getLast7Days } from '../utils/storage.js';
 import { INDIA_DAILY_AVERAGE, GLOBAL_DAILY_AVERAGE } from '../utils/emissionFactors.js';
@@ -203,3 +204,15 @@ export default function Dashboard({ activities = [] }) {
     </div>
   );
 }
+
+Dashboard.propTypes = {
+  /** Array of logged activity objects for the current day */
+  activities: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string,
+      category: PropTypes.string,
+      value: PropTypes.number,
+      label: PropTypes.string,
+    })
+  ),
+};

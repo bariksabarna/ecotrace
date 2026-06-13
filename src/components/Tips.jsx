@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { getCategoryTotals } from '../utils/calculator.js';
 import { getDoneTips, markTipDone } from '../utils/storage.js';
 
@@ -136,3 +137,13 @@ export default function Tips({ activities = [] }) {
     </div>
   );
 }
+
+Tips.propTypes = {
+  /** Current day's logged activities for personalising tip priority */
+  activities: PropTypes.arrayOf(
+    PropTypes.shape({
+      category: PropTypes.string,
+      value: PropTypes.number,
+    })
+  ),
+};
