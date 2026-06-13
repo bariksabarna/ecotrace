@@ -28,7 +28,7 @@ export default function App() {
         return <Dashboard activities={activities} />;
       case 'tracker':
         return <Tracker activities={activities} setActivities={setActivities} />;
-      case 'chat':
+      case 'faq':
         return <AIAssistant activities={activities} />;
       case 'tips':
         return <Tips activities={activities} />;

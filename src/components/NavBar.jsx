@@ -4,7 +4,7 @@ export default function NavBar({ activeTab, setActiveTab }) {
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
     { id: 'tracker', label: 'Track', icon: '📊' },
-    { id: 'chat', label: 'AI Chat', icon: '🤖' },
+    { id: 'faq', label: 'FAQ Bot', icon: '❓' },
     { id: 'tips', label: 'Tips', icon: '💡' },
   ];
 

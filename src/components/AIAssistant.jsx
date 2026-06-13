@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import faqs from '../data/faqs.json';
+
 import { calculateTotal, getCategoryTotals } from '../utils/calculator.js';
 
 const quickActions = [
@@ -18,6 +20,7 @@ export default function AIAssistant({ activities = [] }) {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [consent, setConsent] = useState(() => !!localStorage.getItem('chatConsent'));
   const messagesEndRef = useRef(null);
 
   const todayTotal = calculateTotal(activities);
@@ -33,35 +36,29 @@ export default function AIAssistant({ activities = [] }) {
   }, [messages, loading]);
 
   const sendMessage = async (text) => {
+    if (!consent) {
+      setError('Please opt‑in to use the chatbot.');
+      return;
+    }
     const trimmed = text.trim();
     if (!trimmed || loading) return;
     setError(null);
     setInputText('');
     const newMessages = [...messages, { role: 'user', content: trimmed }];
     setMessages(newMessages);
-    setLoading(true);
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, context: { todayTotal, topCategory } }),
-      });
-      if (!res.ok) throw new Error('Network error');
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setMessages((prev) => [...prev, { role: 'ai', content: data.text }]);
-    } catch (err) {
-      setError('EcoBot is taking a nap — try again!');
-    } finally {
-      setLoading(false);
-    }
+    // Find matching FAQ (case‑insensitive substring)
+    const match = faqs.find((item) =>
+      trimmed.toLowerCase().includes(item.question.toLowerCase())
+    );
+    const reply = match ? match.answer : "I’m sorry, I don’t have an answer for that yet. Feel free to add a new FAQ later!";
+    setMessages((prev) => [...prev, { role: 'ai', content: reply }]);
   };
 
   return (
     <div className="fade-in h-full">
       {/* Page title */}
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-bold text-eco-300">AI Assistant</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-eco-300">FAQ Bot</h1>
         <p className="text-xs text-eco-300/50">Powered by Gemini 2.0 Flash — India-specific advice</p>
       </div>
 
@@ -115,6 +112,16 @@ export default function AIAssistant({ activities = [] }) {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Consent Banner */}
+          {!consent && (
+            <div className="p-4 mb-4 bg-forest-800 border border-eco-500 rounded-xl text-eco-300">
+              <p className="mb-2">To enable the AI assistant, please provide explicit consent.</p>
+              <button onClick={() => { localStorage.setItem('chatConsent', 'true'); setConsent(true); }} className="btn-primary">
+                Enable AI Assistant
+              </button>
+            </div>
+          )}
+
           {/* Quick Actions */}
           <div className="flex overflow-x-auto space-x-2 pb-3 scrollbar-hide select-none flex-shrink-0">
             {quickActions.map((a, i) => (
@@ -133,7 +140,7 @@ export default function AIAssistant({ activities = [] }) {
               onChange={(e) => setInputText(e.target.value)}
               placeholder="Ask EcoBot anything about carbon footprint..."
               className="input-field flex-1"
-              disabled={loading}
+              disabled={loading || !consent}
               aria-label="Message text"
             />
             <button type="submit" disabled={loading || !inputText.trim()}
