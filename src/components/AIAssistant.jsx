@@ -21,6 +21,7 @@ function sanitise(str) {
 export default function AIAssistant({ activities = [] }) {
   const [messages, setMessages] = useState([
     {
+      id: 'init-0',
       role: 'ai',
       content:
         'Namaste! I am EcoBot, your India-specific carbon footprint advisor. How can I help you today? 🌱',
@@ -62,7 +63,7 @@ export default function AIAssistant({ activities = [] }) {
       setError(null);
       setInputText('');
 
-      const userMsg = { role: 'user', content: trimmed };
+      const userMsg = { id: `msg-${Date.now()}`, role: 'user', content: trimmed };
       const updatedMessages = [...messages, userMsg];
       setMessages(updatedMessages);
       setLoading(true);
@@ -91,7 +92,7 @@ export default function AIAssistant({ activities = [] }) {
         const data = await res.json();
         setMessages((prev) => [
           ...prev,
-          { role: 'ai', content: sanitise(data.text ?? '') },
+          { id: `ai-${Date.now()}`, role: 'ai', content: sanitise(data.text ?? '') },
         ]);
       } catch (err) {
         setError(`EcoBot: ${err.message}`);
@@ -146,9 +147,9 @@ export default function AIAssistant({ activities = [] }) {
             aria-live="polite"
             aria-label="Chat messages"
           >
-            {messages.map((m, idx) => (
+            {messages.map((m) => (
               <div
-                key={idx}
+                key={m.id ?? `${m.role}-${m.content.slice(0, 20)}`}
                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
@@ -205,9 +206,9 @@ export default function AIAssistant({ activities = [] }) {
 
           {/* Quick Actions */}
           <div className="flex overflow-x-auto space-x-2 pb-3 scrollbar-hide select-none flex-shrink-0">
-            {quickActions.map((a, i) => (
+            {quickActions.map((a) => (
               <button
-                key={i}
+                key={a}
                 onClick={() => sendMessage(a)}
                 disabled={loading || !consent}
                 className="flex-shrink-0 bg-forest-800 hover:bg-forest-700 border border-forest-700 text-eco-300/70 hover:text-eco-300 text-[11px] px-3 py-1.5 rounded-full transition-all focus:outline-none disabled:opacity-50"

@@ -13,6 +13,31 @@ const app = express();
 // ── Compression (efficiency) ──────────────────────────────────────────────────
 app.use(compression());
 
+// ── CORS — restrict to same origin and known Cloud Run domain ─────────────────
+const ALLOWED_ORIGINS = new Set([
+  'https://ecotrace-1059171200393.us-central1.run.app',
+  'https://ecotrace-wywmtrwwda-uc.a.run.app',
+  // Allow localhost only in development
+  ...(process.env.NODE_ENV !== 'production'
+    ? ['http://localhost:8080', 'http://localhost:5173']
+    : []),
+]);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
+
 // ── Security Headers via Helmet ───────────────────────────────────────────────
 app.use(
   helmet({
@@ -20,6 +45,7 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'"],
+        // 'unsafe-inline' required only for React's dynamic style={} attributes
         styleSrc: ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
         fontSrc: ["'self'", 'https://fonts.gstatic.com'],
         imgSrc: ["'self'", 'data:'],
@@ -28,17 +54,29 @@ app.use(
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
+        upgradeInsecureRequests: [],
       },
     },
     crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
+    crossOriginResourcePolicy: { policy: 'same-origin' },
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+    noSniff: true,
+    xssFilter: true,
+    hidePoweredBy: true,
   })
 );
 
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
 const chatLimiter = rateLimit({
-  windowMs: 60 * 1000,   // 1-minute window
-  max: 20,                // 20 requests per IP per window
+  windowMs: 60 * 1000,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests — please slow down.' },
@@ -64,6 +102,9 @@ Common Indian transport: CNG auto, metro, state buses, two-wheelers.
 Be concise (2–4 sentences), practical, encouraging, and India-specific.
 When listing tips, give max 5 bullet points.`;
 
+/** Allowed role values in message history */
+const ALLOWED_ROLES = new Set(['user', 'ai', 'model']);
+
 /** Allowed top-category values to prevent injection */
 const ALLOWED_CATEGORIES = new Set(['transport', 'food', 'energy', 'shopping', 'none']);
 
@@ -80,10 +121,16 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Too many messages in history.' });
     }
 
-    // Validate each message shape
+    // Validate each message shape — role must be allowlisted
     for (const m of messages) {
       if (typeof m !== 'object' || !m || typeof m.content !== 'string') {
         return res.status(400).json({ error: 'Invalid message format.' });
+      }
+      if (!ALLOWED_ROLES.has(m.role)) {
+        return res.status(400).json({ error: 'Invalid message role.' });
+      }
+      if (m.content.length > 500) {
+        return res.status(400).json({ error: 'Message content too long.' });
       }
     }
 
@@ -91,9 +138,16 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
       return res.status(503).json({ error: 'AI service is not configured on this server.' });
     }
 
-    // Sanitize last user message
-    const lastMessage = String(messages.at(-1)?.content ?? '').slice(0, 500);
-    if (!lastMessage.trim()) {
+    const lastMessage = Array.from(String(messages.at(-1)?.content ?? ''))
+      .filter((c) => {
+        const code = c.charCodeAt(0);
+        return (code >= 32 && code !== 127) || code === 10 || code === 9 || code === 13;
+      })
+      .join('')
+      .slice(0, 500)
+      .trim();
+
+    if (!lastMessage) {
       return res.status(400).json({ error: 'Empty message.' });
     }
 
@@ -120,7 +174,9 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
     const result = await chat.sendMessage(contextStr + lastMessage);
     return res.json({ text: result.response.text() });
   } catch (err) {
-    console.error('Gemini error:', err.message);
+    // Structured error log — intentionally kept for server-side diagnostics
+    // eslint-disable-next-line no-console
+    console.error('[EcoTrace] Chat error:', err.message);
     return res
       .status(500)
       .json({ error: 'AI service temporarily unavailable. Please try again.' });
@@ -128,15 +184,16 @@ app.post('/api/chat', chatLimiter, async (req, res) => {
 });
 
 // ── Health Check ──────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', service: 'EcoTrace' });
 });
 
 // ── SPA Fallback ──────────────────────────────────────────────────────────────
-app.get('*', (req, res) => {
+app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // ── Start Server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 8080;
+// eslint-disable-next-line no-console
 app.listen(PORT, () => console.log(`EcoTrace server running on :${PORT}`));

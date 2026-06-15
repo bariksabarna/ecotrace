@@ -106,7 +106,7 @@ export default function Dashboard({ activities = [] }) {
 
         {/* Category Breakdown */}
         <div className="card space-y-3">
-          <h2 className="text-sm font-semibold text-eco-300">Category Breakdown</h2>
+          <h3 className="text-sm font-semibold text-eco-300">Category Breakdown</h3>
           {categories.map((c) => (
             <div key={c.label} className={`flex items-center space-x-3 p-3 rounded-xl border ${c.bg} ${c.border}`}>
               <span className="text-xl w-7 text-center" role="img" aria-label={c.label}>{c.icon}</span>
@@ -132,7 +132,7 @@ export default function Dashboard({ activities = [] }) {
 
         {/* 7-Day Bar Chart */}
         <div className="card">
-          <h2 className="text-sm font-semibold text-eco-300 mb-4">Last 7 Days</h2>
+          <h3 className="text-sm font-semibold text-eco-300 mb-4">Last 7 Days</h3>
           <div className="flex justify-between items-end h-28 pt-2 px-1">
             {history.map((day, idx) => {
               const heightPct = (day.total / maxDayTotal) * 100;
@@ -160,7 +160,7 @@ export default function Dashboard({ activities = [] }) {
 
         {/* India vs Global Benchmark */}
         <div className="card space-y-4">
-          <h2 className="text-sm font-semibold text-eco-300">Benchmarks</h2>
+          <h3 className="text-sm font-semibold text-eco-300">Benchmarks</h3>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-xs mb-1.5">
