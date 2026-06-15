@@ -125,7 +125,7 @@ describe('saveStreak / getStreak', () => {
 
   it('returns 0 for non-numeric stored value', () => {
     localStorageMock.setItem('ecotrace_streak', 'notanumber');
-    expect(getStreak()).toBe(NaN); // parseInt('notanumber', 10) → NaN
+    expect(getStreak()).toBe(0);
   });
 });
 

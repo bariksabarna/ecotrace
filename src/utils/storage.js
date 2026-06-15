@@ -80,7 +80,9 @@ export function saveStreak(days) {
 export function getStreak() {
   try {
     const val = localStorage.getItem(STREAK_KEY);
-    return val ? parseInt(val, 10) : 0;
+    if (!val) return 0;
+    const parsed = parseInt(val, 10);
+    return isNaN(parsed) ? 0 : parsed;
   } catch {
     return 0;
   }

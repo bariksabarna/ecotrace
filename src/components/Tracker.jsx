@@ -62,6 +62,16 @@ export default function Tracker({ activities = [], setActivities }) {
     saveToday(updated);
   };
 
+  const exportLog = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(activities, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `ecotrace_log_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   const toggle = (s) => setOpenSection(openSection === s ? null : s);
 
   const modeLabels = {
@@ -261,7 +271,18 @@ export default function Tracker({ activities = [], setActivities }) {
           <div className="card sticky top-24">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-eco-300">Today's Log</h3>
-              <span className="text-[10px] text-eco-300/40 font-mono">{activities.length} entries</span>
+              <div className="flex items-center space-x-2">
+                {activities.length > 0 && (
+                  <button
+                    onClick={exportLog}
+                    className="text-[10px] text-eco-400 hover:text-eco-300 border border-eco-500/30 px-2 py-0.5 rounded transition-colors"
+                    aria-label="Export today's log as JSON"
+                  >
+                    Export JSON
+                  </button>
+                )}
+                <span className="text-[10px] text-eco-300/40 font-mono">{activities.length} entries</span>
+              </div>
             </div>
             {activities.length === 0 ? (
               <div className="text-center py-10">
