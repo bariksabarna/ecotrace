@@ -23,7 +23,7 @@ const difficultyColors = {
   Hard:   'bg-danger/10 text-danger border-danger/20',
 };
 
-export default function Tips({ activities = [] }) {
+export default function Tips({ activities = [], tips = staticTips }) {
   const [doneTipIds, setDoneTipIds] = useState([]);
   const [activeFilter, setActiveFilter] = useState('All');
 
@@ -45,7 +45,7 @@ export default function Tips({ activities = [] }) {
 
   const filterOptions = ['All', 'Transport', 'Food', 'Energy', 'Shopping'];
 
-  const filtered = staticTips.filter((t) =>
+  const filtered = tips.filter((t) =>
     activeFilter === 'All' || t.category.toLowerCase() === activeFilter.toLowerCase()
   );
 
@@ -144,6 +144,16 @@ Tips.propTypes = {
     PropTypes.shape({
       category: PropTypes.string,
       value: PropTypes.number,
+    })
+  ),
+  /** Custom list of tips to override static defaults */
+  tips: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      category: PropTypes.string.isRequired,
+      headline: PropTypes.string.isRequired,
+      co2Saving: PropTypes.number.isRequired,
+      difficulty: PropTypes.string.isRequired,
     })
   ),
 };

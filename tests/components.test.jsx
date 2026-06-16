@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 import NavBar from '../src/components/NavBar';
@@ -84,6 +84,15 @@ describe('Dashboard Component', () => {
     expect(screen.getByText('14.50')).toBeInTheDocument();
     expect(screen.getByText("High footprint today. Let's offset this!")).toBeInTheDocument();
   });
+
+  it('handles invalid date formats gracefully', () => {
+    mockGetLast7Days.mockReturnValueOnce([
+      { date: 'invalid-date', total: 5.0 }
+    ]);
+    render(<Dashboard activities={[]} />);
+    // Verification that it rendered successfully without crash (means dates were formatted as '')
+    expect(screen.getByText('Today\'s Footprint')).toBeInTheDocument();
+  });
 });
 
 describe('Tips Component', () => {
@@ -113,6 +122,11 @@ describe('Tips Component', () => {
     const markDoneBtns = screen.getAllByRole('button', { name: /Mark complete/i });
     fireEvent.click(markDoneBtns[0]);
     expect(mockMarkTipDone).toHaveBeenCalled();
+  });
+
+  it('renders empty message when tips list is empty', () => {
+    render(<Tips activities={[]} tips={[]} />);
+    expect(screen.getByText('No tips for this filter.')).toBeInTheDocument();
   });
 });
 
@@ -152,8 +166,11 @@ describe('Tracker Component', () => {
     const foodTab = screen.getByRole('button', { name: /Food/i });
     fireEvent.click(foodTab);
 
-    // Click Non-Veg radio button
-    const nonVegRadio = screen.getByLabelText(/Number of Meals/i); // First let's select radio
+    // Find and change the number of meals input
+    const mealCountInput = screen.getByLabelText(/Number of Meals/i);
+    fireEvent.change(mealCountInput, { target: { value: '3' } });
+
+    // Click Vegan radio button
     const veganLabel = screen.getByText('Vegan');
     fireEvent.click(veganLabel);
 
@@ -191,19 +208,96 @@ describe('Tracker Component', () => {
     const transportTab = screen.getByRole('button', { name: /Transport/i });
     fireEvent.click(transportTab);
   });
+
+  it('handles empty or invalid inputs in tracker forms gracefully', () => {
+    const setActivities = vi.fn();
+    render(<Tracker activities={[]} setActivities={setActivities} />);
+
+    // 1. Transport section invalid input
+    const transportTab = screen.getByRole('button', { name: /Transport/i });
+    let distanceInput = screen.queryByLabelText(/Distance in kilometers/i);
+    if (!distanceInput) {
+      fireEvent.click(transportTab);
+      distanceInput = screen.getByLabelText(/Distance in kilometers/i);
+    }
+    fireEvent.change(distanceInput, { target: { value: '0' } });
+    const transportForm = screen.getByRole('button', { name: /Add to Log/i }).closest('form');
+    fireEvent.submit(transportForm);
+    expect(setActivities).not.toHaveBeenCalled();
+
+    // 2. Food section invalid input
+    const foodTab = screen.getByRole('button', { name: /Food/i });
+    fireEvent.click(foodTab);
+    const mealCountInput = screen.getByLabelText(/Number of Meals/i);
+    fireEvent.change(mealCountInput, { target: { value: '0' } });
+    const foodForm = screen.getByRole('button', { name: /Add to Log/i }).closest('form');
+    fireEvent.submit(foodForm);
+    expect(setActivities).not.toHaveBeenCalled();
+
+    // 3. Energy section with zero values (kWh = 0, LPG = 0)
+    const energyTab = screen.getByRole('button', { name: /Energy/i });
+    fireEvent.click(energyTab);
+    const energySlider = screen.getByLabelText(/Electricity usage/i);
+    fireEvent.change(energySlider, { target: { value: '0' } });
+    const lpgSelect = screen.getByLabelText(/LPG Cylinder/i);
+    fireEvent.change(lpgSelect, { target: { value: '0' } });
+    const energyForm = screen.getByRole('button', { name: /Add to Log/i }).closest('form');
+    fireEvent.submit(energyForm);
+    expect(setActivities).not.toHaveBeenCalled();
+
+    // 4. Energy section with only kWh > 0 (LPG = 0)
+    fireEvent.change(energySlider, { target: { value: '15' } });
+    fireEvent.submit(energyForm);
+    expect(setActivities).toHaveBeenCalled();
+    setActivities.mockClear();
+
+    // 5. Energy section with only LPG > 0 (kWh = 0)
+    fireEvent.change(energySlider, { target: { value: '0' } });
+    fireEvent.change(lpgSelect, { target: { value: '1' } });
+    fireEvent.submit(energyForm);
+    expect(setActivities).toHaveBeenCalled();
+    setActivities.mockClear();
+
+    // 6. Shopping section invalid input
+    const shoppingTab = screen.getByRole('button', { name: /Shopping/i });
+    fireEvent.click(shoppingTab);
+    const quantityInput = screen.getByLabelText('Quantity');
+    fireEvent.change(quantityInput, { target: { value: '0' } });
+    const shopForm = screen.getByRole('button', { name: /Add to Log/i }).closest('form');
+    fireEvent.submit(shopForm);
+    // 7. Transport with Walk mode (value = 0)
+    const transportTabObj = screen.getByRole('button', { name: /Transport/i });
+    fireEvent.click(transportTabObj);
+    const distInput = screen.getByLabelText(/Distance in kilometers/i);
+    fireEvent.change(distInput, { target: { value: '10' } });
+    const modeSelect = screen.getByLabelText(/Transport Mode/i);
+    fireEvent.change(modeSelect, { target: { value: 'walk' } });
+    const transForm = screen.getByRole('button', { name: /Add to Log/i }).closest('form');
+    fireEvent.submit(transForm);
+    expect(setActivities).not.toHaveBeenCalled();
+
+    // Collapse it again (sets openSection to null because openSection === s)
+    fireEvent.click(transportTabObj);
+  });
 });
 
 describe('AIAssistant Component', () => {
   it('handles consent and allows chatting with EcoBot', async () => {
     localStorage.removeItem('chatConsent');
 
-    const mockResponse = { text: 'Here are some tips: use public transport!' };
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
-      Promise.resolve({
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation((url, options) => {
+      return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ text: mockResponse.text }),
-      })
-    );
+        json: () => {
+          const body = JSON.parse(options.body);
+          const lastMsg = body.messages[body.messages.length - 1].content;
+          if (lastMsg.includes('CNG')) {
+            return Promise.resolve({ text: 'CNG is cleaner than petrol.' });
+          }
+          return Promise.resolve({ text: 'Here are some tips: use public transport!' });
+        },
+      });
+    });
 
     const mockActivities = [
       { id: '1', category: 'transport', value: 3.0, label: 'Metro' },
@@ -225,12 +319,156 @@ describe('AIAssistant Component', () => {
     const quickBtn = screen.getAllByRole('button', { name: /Quick action:/i })[0];
     fireEvent.click(quickBtn);
     expect(fetchSpy).toHaveBeenCalled();
+    expect(await screen.findByText('Here are some tips: use public transport!')).toBeInTheDocument();
 
     // Test text input chat flow
     const input = screen.getByPlaceholderText(/Ask EcoBot anything/i);
     fireEvent.change(input, { target: { value: 'How clean is CNG?' } });
     const sendBtn = screen.getByRole('button', { name: /Send message/i });
     fireEvent.submit(sendBtn.closest('form'));
+    expect(await screen.findByText('CNG is cleaner than petrol.')).toBeInTheDocument();
+
+    fetchSpy.mockRestore();
+  });
+
+  it('handles sending message without consent', async () => {
+    localStorage.removeItem('chatConsent');
+    render(<AIAssistant activities={[]} />);
+    // Input is disabled, but JSDOM allows simulating form submit or change
+    const input = screen.getByPlaceholderText(/Ask EcoBot anything/i);
+    fireEvent.change(input, { target: { value: 'Is this secure?' } });
+    const sendBtn = screen.getByRole('button', { name: /Send message/i });
+    fireEvent.submit(sendBtn.closest('form'));
+    
+    expect(screen.getByText('Please opt‑in to use the AI assistant.')).toBeInTheDocument();
+  });
+
+  it('handles API failure and shows error message', async () => {
+    localStorage.setItem('chatConsent', 'true');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ error: 'AI service unavailable' }),
+      })
+    );
+    render(<AIAssistant activities={[]} />);
+    const input = screen.getByPlaceholderText(/Ask EcoBot anything/i);
+    fireEvent.change(input, { target: { value: 'Help me' } });
+    const sendBtn = screen.getByRole('button', { name: /Send message/i });
+    fireEvent.submit(sendBtn.closest('form'));
+
+    // Wait for the async state updates to finish and error to be rendered
+    const errorAlert = await screen.findByRole('alert');
+    expect(errorAlert).toHaveTextContent('EcoBot: AI service unavailable');
+
+    await waitFor(() => {
+      expect(input).not.toBeDisabled();
+    });
+
+    fetchSpy.mockRestore();
+  });
+
+  it('handles network throw error', async () => {
+    localStorage.setItem('chatConsent', 'true');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.reject(new Error('Failed to fetch'))
+    );
+    render(<AIAssistant activities={[]} />);
+    const input = screen.getByPlaceholderText(/Ask EcoBot anything/i);
+    fireEvent.change(input, { target: { value: 'Help me fast' } });
+    const sendBtn = screen.getByRole('button', { name: /Send message/i });
+    fireEvent.submit(sendBtn.closest('form'));
+
+    const errorAlert = await screen.findByRole('alert');
+    expect(errorAlert).toHaveTextContent('EcoBot: Failed to fetch');
+
+    await waitFor(() => {
+      expect(input).not.toBeDisabled();
+    });
+
+    fetchSpy.mockRestore();
+  });
+
+  it('handles JSON parse error on non-ok response', async () => {
+    localStorage.setItem('chatConsent', 'true');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve({
+        ok: false,
+        status: 502,
+        json: () => Promise.reject(new SyntaxError('Unexpected token < in JSON')),
+      })
+    );
+    render(<AIAssistant activities={[]} />);
+    const input = screen.getByPlaceholderText(/Ask EcoBot anything/i);
+    fireEvent.change(input, { target: { value: 'Trigger parse error' } });
+    const sendBtn = screen.getByRole('button', { name: /Send message/i });
+    fireEvent.submit(sendBtn.closest('form'));
+
+    const errorAlert = await screen.findByRole('alert');
+    expect(errorAlert).toHaveTextContent('EcoBot: HTTP 502');
+
+    await waitFor(() => {
+      expect(input).not.toBeDisabled();
+    });
+
+    fetchSpy.mockRestore();
+  });
+
+  it('returns early if trimmed is empty or already loading', async () => {
+    localStorage.setItem('chatConsent', 'true');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    render(<AIAssistant activities={[]} />);
+    const input = screen.getByPlaceholderText(/Ask EcoBot anything/i);
+    fireEvent.change(input, { target: { value: '   ' } });
+    const sendBtn = screen.getByRole('button', { name: /Send message/i });
+    fireEvent.submit(sendBtn.closest('form'));
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    let resolveFetch;
+    const slowPromise = new Promise((resolve) => { resolveFetch = resolve; });
+    fetchSpy.mockImplementation(() => slowPromise.then(() => ({
+      ok: true,
+      json: () => Promise.resolve({ text: 'Slow reply' }),
+    })));
+
+    fireEvent.change(input, { target: { value: 'Slow query' } });
+    fireEvent.submit(sendBtn.closest('form'));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(input, { target: { value: 'Fast query' } });
+    fireEvent.submit(sendBtn.closest('form'));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    resolveFetch();
+    expect(await screen.findByText('Slow reply')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(input).not.toBeDisabled();
+    });
+
+    fetchSpy.mockRestore();
+  });
+
+  it('handles nullish or missing text property in response', async () => {
+    localStorage.setItem('chatConsent', 'true');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ text: null }),
+      })
+    );
+    const { container } = render(<AIAssistant activities={[]} />);
+    const input = screen.getByPlaceholderText(/Ask EcoBot anything/i);
+    fireEvent.change(input, { target: { value: 'Empty response' } });
+    const sendBtn = screen.getByRole('button', { name: /Send message/i });
+    fireEvent.submit(sendBtn.closest('form'));
+
+    await waitFor(() => {
+      const bubbles = container.querySelectorAll('.max-w-\\[85\\%\\]');
+      expect(bubbles.length).toBe(3);
+      expect(input).not.toBeDisabled();
+    });
 
     fetchSpy.mockRestore();
   });
@@ -255,6 +493,24 @@ describe('ErrorBoundary Component', () => {
 
     const reloadBtn = screen.getByRole('button', { name: /Try reloading/i });
     fireEvent.click(reloadBtn);
+
+    spy.mockRestore();
+  });
+
+  it('catches render errors without a message and displays fallback UI', () => {
+    const ProblematicNoMessageComponent = () => {
+      throw null; // Will trigger catch without message or error?.message being undefined
+    };
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(
+      <ErrorBoundary>
+        <ProblematicNoMessageComponent />
+      </ErrorBoundary>
+    );
+
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.getByText('Unknown error')).toBeInTheDocument();
 
     spy.mockRestore();
   });

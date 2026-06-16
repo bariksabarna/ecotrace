@@ -149,7 +149,7 @@ export default function AIAssistant({ activities = [] }) {
           >
             {messages.map((m) => (
               <div
-                key={m.id ?? `${m.role}-${m.content.slice(0, 20)}`}
+                key={m.id}
                 className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
