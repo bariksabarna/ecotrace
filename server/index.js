@@ -136,7 +136,6 @@ const globalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests — please slow down.' },
-  keyGenerator: (req) => req.ip,
 });
 
 /** Tighter limiter for the AI chat endpoint: 20 req/min per IP */
@@ -146,7 +145,6 @@ const chatLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests — please slow down.' },
-  keyGenerator: (req) => req.ip,
 });
 
 app.use(globalLimiter);
