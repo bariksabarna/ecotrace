@@ -28,6 +28,13 @@ function SectionHeader({ icon, label, isOpen, onToggle }) {
   );
 }
 
+SectionHeader.propTypes = {
+  icon: PropTypes.string.isRequired,
+  label: PropTypes.string.isRequired,
+  isOpen: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
+};
+
 export default function Tracker({ activities = [], setActivities }) {
   const [openSection, setOpenSection] = useState('transport');
 

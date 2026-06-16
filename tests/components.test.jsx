@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -462,7 +462,12 @@ describe('AIAssistant Component', () => {
     const input = screen.getByPlaceholderText(/Ask EcoBot anything/i);
     fireEvent.change(input, { target: { value: 'Empty response' } });
     const sendBtn = screen.getByRole('button', { name: /Send message/i });
-    fireEvent.submit(sendBtn.closest('form'));
+
+    await act(async () => {
+      fireEvent.submit(sendBtn.closest('form'));
+      // Flush all microtasks and pending promises
+      await new Promise((r) => setTimeout(r, 0));
+    });
 
     await waitFor(() => {
       const bubbles = container.querySelectorAll('.max-w-\\[85\\%\\]');

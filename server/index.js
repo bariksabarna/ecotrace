@@ -153,6 +153,7 @@ app.use(globalLimiter);
 
 // ── Body Parser ───────────────────────────────────────────────────────────────
 
+
 app.use(express.json({ limit: BODY_SIZE_LIMIT }));
 
 /** Catch malformed JSON bodies and return a clean 400 */
@@ -163,6 +164,7 @@ app.use((err, req, res, next) => {
   }
   next(err);
 });
+
 
 // ── Static Files ──────────────────────────────────────────────────────────────
 
@@ -307,9 +309,8 @@ app.get('*', (_req, res) => {
 
 // ── Global Error Handler ──────────────────────────────────────────────────────
 
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  void next; // required 4-arg signature for Express error handlers
+// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
+app.use((err, req, res, next) => { // eslint-disable-line @typescript-eslint/no-unused-vars
   // eslint-disable-next-line no-console
   console.error(`[EcoTrace][${req.requestId}] Unhandled error:`, err.message);
   res.status(500).json({ error: 'An unexpected error occurred.' });
